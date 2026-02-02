@@ -1,2 +1,21 @@
 *.env
 *.env.local
+
+# Binaries
+backend/api
+backend/backend
+
+# Go
+vendor/
+*.test
+*.out
+
+# Node
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# OS
+.DS_Store
