@@ -110,7 +110,20 @@ func (e *Engine) multiEvaluatorGrade(ctx context.Context, answer domain.AnswerSe
 		ConsensusScore: e.calculateWeightedConsensus(results),
 		Confidence:     confidence,
 		ShouldEscalate: shouldEscalate,
+		Reasoning:      e.generateConsensusReasoning(results, variance, confidence),
 	}, nil
+}
+
+func (e *Engine) generateConsensusReasoning(evaluations []domain.GradingResult, variance float64, confidence float64) string {
+	if variance < 1.0 {
+		return fmt.Sprintf("All evaluators agree (variance: %.2f). High confidence in consensus.", variance)
+	}
+
+	if confidence < 0.7 {
+		return "Low overall confidence due to high variance between evaluators. Escalating for review."
+	}
+
+	return fmt.Sprintf("Moderate variance (%.2f). Consensus reached through weighted average.", variance)
 }
 
 func (e *Engine) calculateMean(scores []float64) float64 {
@@ -146,6 +159,7 @@ func (e *Engine) buildConsensus(multiEval *domain.MultiEvalResult) *domain.Final
 		FinalScore: multiEval.ConsensusScore,
 		AIScore:    &multiEval.ConsensusScore,
 		Confidence: multiEval.Confidence,
+		Reasoning:  multiEval.Reasoning,
 		UpdatedAt:  profiles.CurrentTime(), // Helper or just time.Now()
 	}
 }

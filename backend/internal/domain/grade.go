@@ -27,6 +27,7 @@ type MultiEvalResult struct {
 	MeanScore      float64         `json:"mean_score"`
 	ConsensusScore float64         `json:"consensus_score"`
 	Confidence     float64         `json:"confidence"`
+	Reasoning      string          `json:"reasoning"`
 	ShouldEscalate bool            `json:"should_escalate"`
 }
 
@@ -40,6 +41,7 @@ type FinalGrade struct {
 	AIScore       *float64    `bun:"ai_score" json:"ai_score,omitempty"`
 	OverrideScore *float64    `bun:"override_score" json:"override_score,omitempty"`
 	Confidence    float64     `bun:"confidence,notnull" json:"confidence"`
+	Reasoning     string      `bun:"reasoning" json:"reasoning"`
 	Status        GradeStatus `bun:"status,notnull" json:"status"`
 	GradedBy      *uuid.UUID  `bun:"graded_by,type:uuid" json:"graded_by,omitempty"`
 	UpdatedAt     time.Time   `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
