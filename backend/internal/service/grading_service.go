@@ -4,6 +4,7 @@ import (
 	"context"
 	"harama/internal/domain"
 	"harama/internal/grading"
+	"harama/internal/grading/profiles"
 	"harama/internal/repository/postgres"
 
 	"github.com/google/uuid"
@@ -50,7 +51,7 @@ func (s *GradingService) GradeSubmission(ctx context.Context, submissionID uuid.
 			continue
 		}
 
-		finalGrade, err := s.gradingEngine.GradeAnswer(ctx, answer, *targetQuestion.Rubric)
+		finalGrade, multiEval, err := s.gradingEngine.GradeAnswer(ctx, answer, *targetQuestion.Rubric)
 		if err != nil {
 			return err
 		}
@@ -61,6 +62,22 @@ func (s *GradingService) GradeSubmission(ctx context.Context, submissionID uuid.
 		err = s.repo.SaveFinalGrade(ctx, finalGrade)
 		if err != nil {
 			return err
+		}
+
+		if multiEval.ShouldEscalate {
+			escalation := &domain.EscalationCase{
+				ID:             uuid.New(),
+				SubmissionID:   submissionID,
+				QuestionID:     targetQuestion.ID,
+				AllEvaluations: multiEval.Evaluations,
+				Variance:       multiEval.Variance,
+				EscalatedAt:    profiles.CurrentTime(),
+				Status:         "pending",
+			}
+			err = s.repo.CreateEscalation(ctx, escalation)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

@@ -25,26 +25,24 @@ func NewEngine(provider ai.Provider) *Engine {
 	}
 }
 
-func (e *Engine) GradeAnswer(ctx context.Context, answer domain.AnswerSegment, rubric domain.Rubric) (*domain.FinalGrade, error) {
+func (e *Engine) GradeAnswer(ctx context.Context, answer domain.AnswerSegment, rubric domain.Rubric) (*domain.FinalGrade, *domain.MultiEvalResult, error) {
 	// Multi-evaluator grading
 	multiEval, err := e.multiEvaluatorGrade(ctx, answer, rubric)
 	if err != nil {
-		return nil, fmt.Errorf("multi-evaluator grading failed: %w", err)
-	}
-
-	// Check if escalation needed
-	if multiEval.ShouldEscalate {
-		return &domain.FinalGrade{
-			Status:     domain.GradeStatusReview,
-			Confidence: multiEval.Confidence,
-		}, nil
+		return nil, nil, fmt.Errorf("multi-evaluator grading failed: %w", err)
 	}
 
 	// Build consensus grade
 	finalGrade := e.buildConsensus(multiEval)
-	finalGrade.Status = domain.GradeStatusAutoGraded
 
-	return finalGrade, nil
+	// Check if escalation needed
+	if multiEval.ShouldEscalate {
+		finalGrade.Status = domain.GradeStatusReview
+	} else {
+		finalGrade.Status = domain.GradeStatusAutoGraded
+	}
+
+	return finalGrade, multiEval, nil
 }
 
 func (e *Engine) multiEvaluatorGrade(ctx context.Context, answer domain.AnswerSegment, rubric domain.Rubric) (*domain.MultiEvalResult, error) {

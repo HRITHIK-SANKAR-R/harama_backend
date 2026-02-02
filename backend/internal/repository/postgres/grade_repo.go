@@ -47,3 +47,8 @@ func (r *GradeRepo) CreateAuditLog(ctx context.Context, logEntry map[string]inte
 		Exec(ctx)
 	return err
 }
+
+func (r *GradeRepo) CreateEscalation(ctx context.Context, escalation *domain.EscalationCase) error {
+	_, err := r.db.NewInsert().Model(escalation).Exec(ctx)
+	return err
+}
