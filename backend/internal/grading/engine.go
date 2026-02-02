@@ -8,7 +8,7 @@ import (
 
 	"harama/internal/ai"
 	"harama/internal/domain"
-	"harama/internal/grading/profiles"
+	"harama/internal/pkg/utils"
 )
 
 type Engine struct {
@@ -158,7 +158,7 @@ func (e *Engine) buildConsensus(multiEval *domain.MultiEvalResult) *domain.Final
 		AIScore:    &multiEval.ConsensusScore,
 		Confidence: multiEval.Confidence,
 		Reasoning:  multiEval.Reasoning,
-		UpdatedAt:  profiles.CurrentTime(), // Helper or just time.Now()
+		UpdatedAt:  utils.CurrentTime(),
 	}
 }
 

@@ -1,7 +1,5 @@
 package profiles
 
-import "time"
-
 type EvaluatorProfile struct {
 	ID           string
 	Name         string
@@ -47,8 +45,4 @@ Reward well-structured answers with clear explanations.`,
 		Perspective: "balanced",
 		FocusAreas:  []string{"organization", "clarity", "presentation"},
 	},
-}
-
-func CurrentTime() time.Time {
-	return time.Now()
 }
