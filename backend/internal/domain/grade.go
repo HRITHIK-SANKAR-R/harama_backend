@@ -26,6 +26,7 @@ type MultiEvalResult struct {
 	Variance       float64         `json:"variance"`
 	MeanScore      float64         `json:"mean_score"`
 	ConsensusScore float64         `json:"consensus_score"`
+	Confidence     float64         `json:"confidence"`
 	ShouldEscalate bool            `json:"should_escalate"`
 }
 
