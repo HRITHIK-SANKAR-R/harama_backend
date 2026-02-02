@@ -1217,25 +1217,25 @@ app = "haramma"
 ## Implementation Checklist (4-Day Build)
 
 ### Day 1: Foundation
-- [ ] Go API scaffold with PostgreSQL
-- [ ] Exam + Rubric data models
-- [ ] Upload → MinIO pipeline
-- [ ] Basic OCR (Google Vision)
-- [ ] Gemini API integration (hello world)
+- [x] Go API scaffold with PostgreSQL
+- [x] Exam + Rubric data models
+- [x] Upload → MinIO pipeline
+- [x] Basic OCR (Google Vision / Mock)
+- [x] Gemini API integration (hello world)
 
 ### Day 2: Grading Engine
-- [ ] Question segmentation
-- [ ] Rubric → structured prompt
-- [ ] Single-evaluator grading (Gemini)
-- [ ] Confidence scoring
-- [ ] Teacher override UI (basic)
+- [x] Question segmentation
+- [x] Rubric → structured prompt
+- [x] Single-evaluator grading (Gemini)
+- [x] Confidence scoring
+- [x] Teacher override UI (basic)
 
 ### Day 3: Multimodal + Trust
-- [ ] Diagram extraction
-- [ ] Multimodal grading prompts
-- [ ] Multi-evaluator architecture
-- [ ] Variance calculation
-- [ ] Escalation logic
+- [x] Diagram extraction
+- [x] Multimodal grading prompts
+- [x] Multi-evaluator architecture
+- [x] Variance calculation
+- [x] Escalation logic
 
 ### Day 4: Polish + Demo
 - [ ] Dashboard UI
