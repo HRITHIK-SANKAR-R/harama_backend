@@ -4,6 +4,7 @@ import (
 	"context"
 	"harama/internal/ai"
 	"harama/internal/domain"
+	"harama/internal/pkg/utils"
 	"harama/internal/repository/postgres"
 
 	"github.com/google/uuid"
@@ -49,6 +50,18 @@ func (s *FeedbackService) CaptureOverrideFeedback(ctx context.Context, submissio
 		aiScore = *originalGrade.AIScore
 	}
 
+	// 2. Update the final grade in the repository
+	originalGrade.OverrideScore = &teacherScore
+	originalGrade.FinalScore = teacherScore
+	originalGrade.Status = domain.GradeStatusOverridden
+	originalGrade.UpdatedAt = utils.CurrentTime()
+
+	err = s.gradeRepo.SaveFinalGrade(ctx, originalGrade)
+	if err != nil {
+		return err
+	}
+
+	// 3. Log the feedback event
 	event := &domain.FeedbackEvent{
 		ID:            uuid.New(),
 		QuestionID:    questionID,
