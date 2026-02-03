@@ -47,7 +47,9 @@ func (s *OCRService) ProcessSubmission(ctx context.Context, submissionID uuid.UU
 			return fmt.Errorf("failed to get file from storage: %w", err)
 		}
 
-		ocrResult, err := s.vision.ExtractText(ctx, imgBytes)
+		// TODO: Determine mime type from file extension or content sniffing
+		mimeType := "image/png" 
+		ocrResult, err := s.vision.ExtractText(ctx, imgBytes, mimeType)
 		if err != nil {
 			return fmt.Errorf("failed to extract text with vision: %w", err)
 		}
