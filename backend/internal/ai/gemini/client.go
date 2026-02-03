@@ -70,6 +70,45 @@ func (c *Client) Grade(ctx context.Context, req ai.GradingRequest) (domain.Gradi
 	return result, nil
 }
 
+func (c *Client) GenerateFeedback(ctx context.Context, req ai.FeedbackRequest) (string, error) {
+	prompt := fmt.Sprintf(`
+ROLE: Educational feedback specialist
+
+STUDENT: %s
+CURRENT GRADE: %.1f/%.1f
+AI REASONING: %s
+
+HISTORY OF OVERRIDES:
+%v
+
+TASK:
+Generate personalized, encouraging, and actionable feedback for the student.
+Focus on:
+1. What they did well.
+2. Specific areas for improvement based on current mistakes and history.
+3. Actionable next steps.
+
+TONE: Encouraging but honest.
+LENGTH: 3-4 sentences.
+`, req.StudentName, req.Grade.FinalScore, req.Grade.Confidence, req.Grade.Reasoning, req.History)
+
+	resp, err := c.model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return "", fmt.Errorf("gemini API error: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("empty response from Gemini")
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	if text, ok := part.(genai.Text); ok {
+		return string(text), nil
+	}
+
+	return "", fmt.Errorf("unexpected response part type")
+}
+
 // Stubs for helper functions
 func loadPromptTemplate(evaluatorID string) string { return "" }
 func buildGradingPrompt(template string, answer domain.AnswerSegment, rubric domain.Rubric) string { return "" }
