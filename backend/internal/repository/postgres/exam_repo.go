@@ -45,6 +45,19 @@ func (r *ExamRepo) ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]doma
 	return exams, err
 }
 
+func (r *ExamRepo) GetQuestionByID(ctx context.Context, id uuid.UUID) (*domain.Question, error) {
+	question := new(domain.Question)
+	err := r.db.NewSelect().
+		Model(question).
+		Relation("Rubric").
+		Where("q.id = ?", id).
+		Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return question, nil
+}
+
 func (r *ExamRepo) CreateQuestion(ctx context.Context, question *domain.Question) error {
 	_, err := r.db.NewInsert().Model(question).Exec(ctx)
 	return err

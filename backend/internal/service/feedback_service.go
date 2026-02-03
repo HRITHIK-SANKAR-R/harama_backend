@@ -12,13 +12,15 @@ import (
 type FeedbackService struct {
 	repo       *postgres.FeedbackRepo
 	gradeRepo  *postgres.GradeRepo
+	examRepo   *postgres.ExamRepo
 	aiProvider ai.Provider
 }
 
-func NewFeedbackService(repo *postgres.FeedbackRepo, gradeRepo *postgres.GradeRepo, aiProvider ai.Provider) *FeedbackService {
+func NewFeedbackService(repo *postgres.FeedbackRepo, gradeRepo *postgres.GradeRepo, examRepo *postgres.ExamRepo, aiProvider ai.Provider) *FeedbackService {
 	return &FeedbackService{
 		repo:       repo,
 		gradeRepo:  gradeRepo,
+		examRepo:   examRepo,
 		aiProvider: aiProvider,
 	}
 }
@@ -59,6 +61,35 @@ func (s *FeedbackService) CaptureOverrideFeedback(ctx context.Context, submissio
 	}
 
 	return s.repo.SaveFeedbackEvent(ctx, event)
+}
+
+func (s *FeedbackService) AnalyzeQuestionPatterns(ctx context.Context, questionID uuid.UUID) (ai.AnalysisResult, error) {
+	// 1. Get question and rubric
+	question, err := s.examRepo.GetQuestionByID(ctx, questionID)
+	if err != nil {
+		return ai.AnalysisResult{}, err
+	}
+
+	if question.Rubric == nil {
+		return ai.AnalysisResult{}, nil // No rubric to analyze against
+	}
+
+	// 2. Get feedback events for this question
+	events, err := s.repo.GetFeedbackByQuestion(ctx, questionID)
+	if err != nil {
+		return ai.AnalysisResult{}, err
+	}
+
+	if len(events) == 0 {
+		return ai.AnalysisResult{}, nil // Not enough data
+	}
+
+	// 3. Call AI to analyze patterns
+	return s.aiProvider.AnalyzePatterns(ctx, ai.AnalysisRequest{
+		QuestionID: questionID,
+		Rubric:     *question.Rubric,
+		Events:     events,
+	})
 }
 
 func (s *FeedbackService) GenerateStudentFeedback(ctx context.Context, submissionID uuid.UUID, questionID uuid.UUID, studentName string) (string, error) {
