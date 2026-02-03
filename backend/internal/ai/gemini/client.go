@@ -151,7 +151,15 @@ OUTPUT JSON FORMAT:
 		return ai.AnalysisResult{}, fmt.Errorf("unexpected response part type")
 	}
 
-	return result, nil
+	var analysisResult ai.AnalysisResult
+	if err := json.Unmarshal([]byte(textPart), &analysisResult); err != nil {
+		// If it's not JSON, we might need a more robust parser or just return as recommendation
+		return ai.AnalysisResult{
+			Recommendation: string(textPart),
+		}, nil
+	}
+
+	return analysisResult, nil
 }
 
 // Stubs for helper functions

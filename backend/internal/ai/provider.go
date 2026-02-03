@@ -3,6 +3,7 @@ package ai
 import (
     "context"
     "harama/internal/domain"
+    "github.com/google/uuid"
 )
 
 type Provider interface {
