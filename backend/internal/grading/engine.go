@@ -25,9 +25,9 @@ func NewEngine(provider ai.Provider) *Engine {
 	}
 }
 
-func (e *Engine) GradeAnswer(ctx context.Context, answer domain.AnswerSegment, rubric domain.Rubric, subject string) (*domain.FinalGrade, *domain.MultiEvalResult, error) {
+func (e *Engine) GradeAnswer(ctx context.Context, answer domain.AnswerSegment, rubric domain.Rubric, subject string, questionText string) (*domain.FinalGrade, *domain.MultiEvalResult, error) {
 	// Multi-evaluator grading
-	multiEval, err := e.multiEvaluatorGrade(ctx, answer, rubric, subject)
+	multiEval, err := e.multiEvaluatorGrade(ctx, answer, rubric, subject, questionText)
 	if err != nil {
 		return nil, nil, fmt.Errorf("multi-evaluator grading failed: %w", err)
 	}
@@ -45,7 +45,7 @@ func (e *Engine) GradeAnswer(ctx context.Context, answer domain.AnswerSegment, r
 	return finalGrade, multiEval, nil
 }
 
-func (e *Engine) multiEvaluatorGrade(ctx context.Context, answer domain.AnswerSegment, rubric domain.Rubric, subject string) (*domain.MultiEvalResult, error) {
+func (e *Engine) multiEvaluatorGrade(ctx context.Context, answer domain.AnswerSegment, rubric domain.Rubric, subject string, questionText string) (*domain.MultiEvalResult, error) {
 	evaluatorIDs := []string{
 		"rubric_enforcer",
 		"reasoning_validator",
@@ -64,10 +64,11 @@ func (e *Engine) multiEvaluatorGrade(ctx context.Context, answer domain.AnswerSe
 		go func(evalID string) {
 			defer wg.Done()
 			res, err := e.aiProvider.Grade(ctx, ai.GradingRequest{
-				Answer:      answer,
-				Rubric:      rubric,
-				EvaluatorID: evalID,
-				Subject:     subject,
+				Answer:       answer,
+				Rubric:       rubric,
+				EvaluatorID:  evalID,
+				Subject:      subject,
+				QuestionText: questionText,
 			})
 			resChan <- resultTask{res, err}
 		}(id)

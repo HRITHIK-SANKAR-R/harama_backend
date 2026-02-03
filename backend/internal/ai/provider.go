@@ -13,10 +13,11 @@ type Provider interface {
 }
 
 type GradingRequest struct {
-    Answer      domain.AnswerSegment
-    Rubric      domain.Rubric
-    EvaluatorID string
-    Subject     string
+    Answer       domain.AnswerSegment
+    Rubric       domain.Rubric
+    EvaluatorID  string
+    Subject      string
+    QuestionText string
 }
 
 type FeedbackRequest struct {

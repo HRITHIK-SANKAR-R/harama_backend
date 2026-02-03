@@ -1,10 +1,14 @@
 package gemini
 
 import (
+	"bytes"
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
@@ -13,6 +17,9 @@ import (
 	"harama/internal/domain"
 	"harama/internal/grading/profiles"
 )
+
+//go:embed prompts/*.txt
+var promptsFS embed.FS
 
 type Client struct {
     client *genai.Client
@@ -42,10 +49,11 @@ func (c *Client) Grade(ctx context.Context, req ai.GradingRequest) (domain.Gradi
 	promptTemplate := loadPromptTemplate(req.EvaluatorID)
 
 	// Build prompt
-	prompt := buildGradingPrompt(promptTemplate, req.Answer, req.Rubric, req.Subject)
+	prompt := buildGradingPrompt(promptTemplate, req.Answer, req.Rubric, req.Subject, req.QuestionText)
 
 	// Prepare parts for multimodal input
 	parts := []genai.Part{genai.Text(prompt)}
+// ... (omitted diagrams part for now, it's already there)
 
 	// Add diagrams if present (Phase 2)
 	for _, diagramURL := range req.Answer.Diagrams {
@@ -163,15 +171,74 @@ OUTPUT JSON FORMAT:
 }
 
 // Stubs for helper functions
-func loadPromptTemplate(evaluatorID string) string { return "" }
-
-func buildGradingPrompt(template string, answer domain.AnswerSegment, rubric domain.Rubric, subject string) string {
-	subjectProfile, ok := profiles.Subjects[strings.ToLower(subject)]
-	bias := ""
-	if ok {
-		bias = subjectProfile.PromptBias
+func loadPromptTemplate(evaluatorID string) string {
+	data, err := promptsFS.ReadFile(filepath.Join("prompts", evaluatorID+".txt"))
+	if err != nil {
+		return ""
 	}
-	return fmt.Sprintf("%s\n\nSubject Focus: %s\nAnswer: %s\nRubric: %v", template, bias, answer.Text, rubric)
+	return string(data)
 }
 
-func parseResponse(resp *genai.GenerateContentResponse, result *domain.GradingResult) error { return nil }
+func buildGradingPrompt(evalTmpl string, answer domain.AnswerSegment, rubric domain.Rubric, subject string, questionText string) string {
+	baseData, err := promptsFS.ReadFile("prompts/base_grading.txt")
+	if err != nil {
+		return ""
+	}
+
+	subjectProfile, _ := profiles.Subjects[strings.ToLower(subject)]
+
+	// Execute base template
+	type baseVars struct {
+		QuestionText string
+		RubricJSON   string
+		AnswerText   string
+		MaxPoints    int
+	}
+
+	rubricJSON, _ := json.MarshalIndent(rubric, "", "  ")
+
+	baseVarsData := baseVars{
+		QuestionText: questionText,
+		RubricJSON:   string(rubricJSON),
+		AnswerText:   answer.Text,
+		MaxPoints:    10, // Default or from rubric if we added it
+	}
+
+	tmpl, _ := template.New("base").Parse(string(baseData))
+	var baseBuf bytes.Buffer
+	tmpl.Execute(&baseBuf, baseVarsData)
+
+	// Execute evaluator template
+	evalVars := struct {
+		BasePrompt   string
+		SubjectFocus string
+	}{
+		BasePrompt:   baseBuf.String(),
+		SubjectFocus: subjectProfile.PromptBias,
+	}
+
+	eTmpl, _ := template.New("eval").Parse(evalTmpl)
+	var evalBuf bytes.Buffer
+	eTmpl.Execute(&evalBuf, evalVars)
+
+	return evalBuf.String()
+}
+
+func parseResponse(resp *genai.GenerateContentResponse, result *domain.GradingResult) error {
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return fmt.Errorf("empty response")
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	text, ok := part.(genai.Text)
+	if !ok {
+		return fmt.Errorf("unexpected part type")
+	}
+
+	// Clean up markdown code blocks if present
+	cleanJSON := strings.TrimPrefix(string(text), "```json")
+	cleanJSON = strings.TrimSuffix(cleanJSON, "```")
+	cleanJSON = strings.TrimSpace(cleanJSON)
+
+	return json.Unmarshal([]byte(cleanJSON), result)
+}
