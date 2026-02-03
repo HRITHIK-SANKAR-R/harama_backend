@@ -8,8 +8,10 @@ import (
 	"harama/internal/api/middleware"
 	"harama/internal/config"
 	"harama/internal/grading"
+	"harama/internal/ocr"
 	"harama/internal/repository/postgres"
 	"harama/internal/service"
+	"harama/internal/storage"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/uptrace/bun"
@@ -24,15 +26,25 @@ func NewRouter(cfg *config.Config, db *bun.DB) *chi.Mux {
 	gradeRepo := postgres.NewGradeRepo(db)
 	feedbackRepo := postgres.NewFeedbackRepo(db)
 
-	// 2. Initialize AI Provider
+	// 2. Initialize AI Provider & Infrastructure
 	aiClient, _ := gemini.NewClient(cfg.GeminiAPIKey)
+	
+	minioStorage, _ := storage.NewMinioStorage(
+		cfg.MinioEndpoint,
+		cfg.MinioAccessKey,
+		cfg.MinioSecretKey,
+		cfg.MinioBucket,
+		false, // useSSL
+	)
+
+	visionProcessor, _ := ocr.NewGoogleVisionProcessor(cfg.GeminiAPIKey) // Using same API key for now if applicable or use separate
 
 	// 3. Initialize Engine
 	gradingEngine := grading.NewEngine(aiClient)
 
 	// 4. Initialize Services
 	examService := service.NewExamService(examRepo)
-	ocrService := service.NewOCRService(subRepo)
+	ocrService := service.NewOCRService(subRepo, minioStorage, visionProcessor)
 	gradingService := service.NewGradingService(gradeRepo, examRepo, subRepo, gradingEngine)
 	feedbackService := service.NewFeedbackService(feedbackRepo, gradeRepo, examRepo, aiClient)
 
