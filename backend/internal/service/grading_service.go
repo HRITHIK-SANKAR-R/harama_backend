@@ -51,7 +51,7 @@ func (s *GradingService) GradeSubmission(ctx context.Context, submissionID uuid.
 			continue
 		}
 
-		finalGrade, multiEval, err := s.gradingEngine.GradeAnswer(ctx, answer, *targetQuestion.Rubric)
+		finalGrade, multiEval, err := s.gradingEngine.GradeAnswer(ctx, answer, *targetQuestion.Rubric, exam.Subject)
 		if err != nil {
 			return err
 		}

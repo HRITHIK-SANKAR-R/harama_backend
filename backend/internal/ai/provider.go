@@ -15,6 +15,7 @@ type GradingRequest struct {
     Answer      domain.AnswerSegment
     Rubric      domain.Rubric
     EvaluatorID string
+    Subject     string
 }
 
 type FeedbackRequest struct {

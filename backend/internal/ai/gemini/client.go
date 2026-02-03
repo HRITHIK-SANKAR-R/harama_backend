@@ -1,14 +1,17 @@
 package gemini
 
 import (
-    "context"
-    "fmt"
-    
-    "github.com/google/generative-ai-go/genai"
-    "google.golang.org/api/option"
-    
-    "harama/internal/ai"
-    "harama/internal/domain"
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/google/generative-ai-go/genai"
+	"google.golang.org/api/option"
+
+	"harama/internal/ai"
+	"harama/internal/domain"
+	"harama/internal/grading/profiles"
 )
 
 type Client struct {
@@ -39,7 +42,7 @@ func (c *Client) Grade(ctx context.Context, req ai.GradingRequest) (domain.Gradi
 	promptTemplate := loadPromptTemplate(req.EvaluatorID)
 
 	// Build prompt
-	prompt := buildGradingPrompt(promptTemplate, req.Answer, req.Rubric)
+	prompt := buildGradingPrompt(promptTemplate, req.Answer, req.Rubric, req.Subject)
 
 	// Prepare parts for multimodal input
 	parts := []genai.Part{genai.Text(prompt)}
@@ -148,13 +151,19 @@ OUTPUT JSON FORMAT:
 		return ai.AnalysisResult{}, fmt.Errorf("unexpected response part type")
 	}
 
-	var result ai.AnalysisResult
-	if err := json.Unmarshal([]byte(textPart), &result); err != nil {
-		// If it's not JSON, we might need a more robust parser or just return as recommendation
-		return ai.AnalysisResult{
-			Recommendation: string(textPart),
-		}, nil
-	}
-
 	return result, nil
 }
+
+// Stubs for helper functions
+func loadPromptTemplate(evaluatorID string) string { return "" }
+
+func buildGradingPrompt(template string, answer domain.AnswerSegment, rubric domain.Rubric, subject string) string {
+	subjectProfile, ok := profiles.Subjects[strings.ToLower(subject)]
+	bias := ""
+	if ok {
+		bias = subjectProfile.PromptBias
+	}
+	return fmt.Sprintf("%s\n\nSubject Focus: %s\nAnswer: %s\nRubric: %v", template, bias, answer.Text, rubric)
+}
+
+func parseResponse(resp *genai.GenerateContentResponse, result *domain.GradingResult) error { return nil }
