@@ -27,3 +27,6 @@ backend/api.log
 # Binaries
 backend/harama-api
 Create_Feats.md
+bin/
+backend/migrate
+backend/worker
