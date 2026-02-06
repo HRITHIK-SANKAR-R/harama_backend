@@ -34,7 +34,7 @@ func NewRouter(cfg *config.Config, db *bun.DB) *chi.Mux {
 		cfg.MinioAccessKey,
 		cfg.MinioSecretKey,
 		cfg.MinioBucket,
-		false, // useSSL
+		cfg.MinioUseSSL,
 	)
 
 	visionProcessor, _ := ocr.NewGeminiOCRProcessor(cfg.GeminiAPIKey)
@@ -72,6 +72,7 @@ func NewRouter(cfg *config.Config, db *bun.DB) *chi.Mux {
 
 		// Submission Routes
 		r.Post("/exams/{id}/submissions", submissionHandler.CreateSubmission)
+		r.Get("/submissions/{id}", submissionHandler.GetSubmission)
 		r.Post("/submissions/{id}/trigger-grading", submissionHandler.TriggerGrading)
 
 		// Grading & Feedback Routes
