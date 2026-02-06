@@ -174,13 +174,19 @@ func (s *FeedbackService) AdaptRubric(ctx context.Context, questionID uuid.UUID)
 		return nil
 	}
 
-	// In a real system, we'd call Gemini again to "Apply these recommendations to this JSON rubric"
-	// For this phase, we'll mark it as a task to be refined in Phase 5 corrections.
-	
-	// Example: Log the recommendation for now or update a 'GradingNotes' field
-	question.Rubric.GradingNotes = "AI Recommendation: " + analysis.Recommendation
+	// 3. Call AI to refine rubric based on analysis
+	refinedRubric, err := s.aiProvider.RefineRubric(ctx, ai.RefineRubricRequest{
+		CurrentRubric: *question.Rubric,
+		Analysis:      analysis,
+	})
+	if err != nil {
+		return err
+	}
 
-	return s.examRepo.UpdateRubric(ctx, question.Rubric)
+	// 4. Update the rubric in repository
+	// Note: We might want to version rubrics instead of overwriting, but for now we update in place
+	// effectively "adapting" it.
+	return s.examRepo.UpdateRubric(ctx, &refinedRubric)
 }
 
 func (s *FeedbackService) GetFeedbackByQuestion(ctx context.Context, questionID uuid.UUID) ([]domain.FeedbackEvent, error) {

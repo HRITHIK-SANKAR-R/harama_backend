@@ -65,3 +65,15 @@ func (h *FeedbackHandler) AnalyzePatterns(w http.ResponseWriter, r *http.Request
 
 	json.NewEncoder(w).Encode(result)
 }
+
+func (h *FeedbackHandler) AdaptRubric(w http.ResponseWriter, r *http.Request) {
+	questionID, _ := uuid.Parse(chi.URLParam(r, "question_id"))
+
+	err := h.service.AdaptRubric(r.Context(), questionID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}

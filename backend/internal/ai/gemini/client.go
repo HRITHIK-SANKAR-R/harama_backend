@@ -180,6 +180,59 @@ OUTPUT JSON FORMAT:
 	return analysisResult, nil
 }
 
+func (c *Client) RefineRubric(ctx context.Context, req ai.RefineRubricRequest) (domain.Rubric, error) {
+	prompt := fmt.Sprintf(`
+ROLE: Rubric Refinement Specialist
+
+CURRENT RUBRIC:
+%v
+
+ANALYSIS OF GRADING MISTAKES:
+Patterns: %v
+Recommendations: %s
+
+TASK:
+Update the rubric to address the identified issues.
+- Adjust point weights if criteria are consistently undervalued or overvalued.
+- Clarify descriptions if they are ambiguous.
+- Add or modify partial credit rules if needed.
+
+OUTPUT:
+Return ONLY the updated Rubric JSON.
+`, req.CurrentRubric, req.Analysis.Patterns, req.Analysis.Recommendation)
+
+	resp, err := c.model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return domain.Rubric{}, fmt.Errorf("gemini API error: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return domain.Rubric{}, fmt.Errorf("empty response from Gemini")
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	textPart, ok := part.(genai.Text)
+	if !ok {
+		return domain.Rubric{}, fmt.Errorf("unexpected response part type")
+	}
+
+	// Clean up markdown code blocks if present
+	cleanJSON := strings.TrimPrefix(string(textPart), "```json")
+	cleanJSON = strings.TrimSuffix(cleanJSON, "```")
+	cleanJSON = strings.TrimSpace(cleanJSON)
+
+	var refinedRubric domain.Rubric
+	if err := json.Unmarshal([]byte(cleanJSON), &refinedRubric); err != nil {
+		return domain.Rubric{}, fmt.Errorf("failed to parse refined rubric: %w", err)
+	}
+
+	// Preserve ID and QuestionID from the request as the AI might hallucinate or omit them
+	refinedRubric.ID = req.CurrentRubric.ID
+	refinedRubric.QuestionID = req.CurrentRubric.QuestionID
+
+	return refinedRubric, nil
+}
+
 // Stubs for helper functions
 func loadPromptTemplate(evaluatorID string) string {
 	data, err := promptsFS.ReadFile(filepath.Join("prompts", evaluatorID+".txt"))

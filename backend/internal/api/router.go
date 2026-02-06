@@ -102,6 +102,7 @@ func NewRouter(cfg *config.Config, db *bun.DB) (*chi.Mux, error) {
 			r.Post("/submissions/{submission_id}/questions/{question_id}/override", feedbackHandler.CaptureOverride)
 			r.Get("/submissions/{submission_id}/questions/{question_id}/feedback", feedbackHandler.GetStudentFeedback)
 			r.Get("/questions/{question_id}/analysis", feedbackHandler.AnalyzePatterns)
+			r.Post("/questions/{question_id}/adapt-rubric", feedbackHandler.AdaptRubric)
 	
 			// Analytics & Audit Routes
 			r.Get("/analytics/grading-trends", analyticsHandler.GetGradingTrends)

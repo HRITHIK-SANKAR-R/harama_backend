@@ -29,7 +29,6 @@ func main() {
     if err != nil {
         log.Fatalf("Failed to initialize router: %v", err)
     }
-    
     // Start server
     srv := &http.Server{
         Addr:    ":" + cfg.Port,

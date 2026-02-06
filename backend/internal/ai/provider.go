@@ -10,6 +10,7 @@ type Provider interface {
     Grade(ctx context.Context, req GradingRequest) (domain.GradingResult, error)
     GenerateFeedback(ctx context.Context, req FeedbackRequest) (string, error)
     AnalyzePatterns(ctx context.Context, req AnalysisRequest) (AnalysisResult, error)
+    RefineRubric(ctx context.Context, req RefineRubricRequest) (domain.Rubric, error)
 }
 
 type GradingRequest struct {
@@ -36,4 +37,9 @@ type AnalysisResult struct {
     Patterns       []string `json:"patterns"`
     CommonReasons  []string `json:"common_reasons"`
     Recommendation string   `json:"recommendation"`
+}
+
+type RefineRubricRequest struct {
+    CurrentRubric  domain.Rubric
+    Analysis       AnalysisResult
 }

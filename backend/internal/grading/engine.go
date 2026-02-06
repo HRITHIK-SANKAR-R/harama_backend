@@ -15,6 +15,7 @@ type Engine struct {
 	aiProvider     ai.Provider
 	confidenceCalc *ConfidenceCalculator
 	varianceCalc   *VarianceCalculator
+	partialCredit  *PartialCreditEngine
 }
 
 func NewEngine(provider ai.Provider) *Engine {
@@ -22,6 +23,7 @@ func NewEngine(provider ai.Provider) *Engine {
 		aiProvider:     provider,
 		confidenceCalc: NewConfidenceCalculator(),
 		varianceCalc:   NewVarianceCalculator(),
+		partialCredit:  NewPartialCreditEngine(),
 	}
 }
 
@@ -82,6 +84,12 @@ func (e *Engine) multiEvaluatorGrade(ctx context.Context, answer domain.AnswerSe
 		if res.err != nil {
 			return nil, res.err
 		}
+
+		// Recalculate score to ensure rubric compliance
+		// This enforces that the score matches the sum of identified criteria
+		calcScore, _ := e.partialCredit.CalculateScore(rubric, res.result.CriteriaMet)
+		res.result.Score = calcScore
+
 		results = append(results, res.result)
 	}
 

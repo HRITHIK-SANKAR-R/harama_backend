@@ -21,5 +21,5 @@ TASK:
    - score (0-{{.MaxPoints}})
    - confidence (0.0-1.0)
    - reasoning (string)
-   - criteria_met (array)
-   - mistakes_found (array)
+   - criteria_met (array of strings, using the EXACT IDs from the rubric criteria and partial credit rules)
+   - mistakes_found (array of strings, using the EXACT IDs from the common mistakes section, or descriptions if not applicable)
