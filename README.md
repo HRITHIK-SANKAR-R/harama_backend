@@ -1247,6 +1247,50 @@ app = "haramma"
 
 ---
 
+## Detailed Implementation Status
+
+### Phase 1 — Core Reasoned Grading Engine
+- [X] **1.1 Exam & Rubric Ingestion**: Models and CRUD endpoints implemented.
+- [X] **1.2 Submission Upload & OCR**: MinIO integration + Gemini Vision OCR pipeline.
+- [X] **1.3 Question Segmentation**: Logical boundary detection implemented.
+- [X] **1.4 Rubric-Aware Grading**: Structured Gemini prompts for systematic evaluation.
+- [X] **1.5 Confidence Scoring**: Multi-factor scoring (OCR + Rubric match) implemented.
+- [X] **1.6 Teacher Override & Audit**: Hash-chained immutable logs + override logic.
+- [X] **1.7 Dashboard & Review UI**: Basic UI and listing pages implemented.
+
+### Phase 2 — Multimodal & Diagram Reasoning
+- [X] **2.1 Diagram Detection**: Infrastructure to extract visual assets.
+- [X] **2.2 Multimodal Co-Reasoning**: Gemini Vision multimodal prompts integrated.
+- [ ] **2.3 Partial Credit Engine**: Basic logic exists, but subject-specific granular rules are pending.
+
+### Phase 3 — Disagreement & Trust Layer
+- [X] **3.1 Multi-Evaluator Architecture**: Three distinct AI profiles (Enforcer, Validator, Analyzer).
+- [X] **3.2 Disagreement Detection**: Variance and Standard Deviation logic implemented.
+- [X] **3.3 Escalation System**: Automatic "Needs Review" status for high-variance cases.
+- [X] **3.4 Consensus Mechanism**: Weighted confidence-based scoring.
+
+### Phase 4 — Learning Feedback Loop
+- [X] **4.1 Feedback Capture**: Tracking delta between AI and human scores.
+- [X] **4.2 Pattern Recognition**: AI-powered analysis of recurring grading mistakes.
+- [ ] **4.3 Adaptive Rubric Weighting**: Service placeholder exists; automated updating is pending.
+- [X] **4.4 Student Feedback**: Automated generation of personalized feedback.
+
+### Phase 5 — Platformization
+- [X] **5.1 Multi-Tenant Architecture**: Full data isolation using `X-Tenant-ID`.
+- [X] **5.2 Public API Layer**: Versioned routes and structured error handling.
+- [ ] **5.3 Subject-Specific Profiles**: Basic profiles exist; needs refinement.
+- [X] **5.4 Model Abstraction**: Generic AI client interface implemented.
+
+### Hackathon-Winning Features
+- [ ] **Feature A: Live Collaboration**
+- [ ] **Feature B: Handwriting Profiling**
+- [ ] **Feature C: Plagiarism Detection**
+- [X] **Feature D: Difficulty Calibration**: Implemented via Analytics Trends.
+- [ ] **Feature E: Voice Commands**
+- [X] **Feature F: Export & Integration**: CSV Export implemented.
+
+---
+
 ## Risk Mitigation
 
 ### Risk 1: OCR Accuracy
