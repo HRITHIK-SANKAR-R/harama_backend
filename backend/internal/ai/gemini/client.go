@@ -45,11 +45,21 @@ func NewClient(apiKey string) (*Client, error) {
 }
 
 func (c *Client) Grade(ctx context.Context, req ai.GradingRequest) (domain.GradingResult, error) {
+	// Load appropriate profile
+	profile, ok := profiles.Evaluators[req.EvaluatorID]
+	if !ok {
+		return domain.GradingResult{}, fmt.Errorf("evaluator profile not found: %s", req.EvaluatorID)
+	}
+
 	// Load appropriate prompt template
 	promptTemplate := loadPromptTemplate(req.EvaluatorID)
 
 	// Build prompt
 	prompt := buildGradingPrompt(promptTemplate, req.Answer, req.Rubric, req.Subject, req.QuestionText)
+
+	// Create a local model instance to safely set temperature for this specific call
+	model := c.client.GenerativeModel("gemini-3-pro")
+	model.SetTemperature(float32(profile.Temperature))
 
 	// Prepare parts for multimodal input
 	parts := []genai.Part{genai.Text(prompt)}
