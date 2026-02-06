@@ -1,18 +1,51 @@
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
+import { FinalGrade } from '@/types';
+
 export const useGrading = (submissionId: string) => {
-    return {
-        grading: {
-            score: 85,
-            confidence: 0.9,
-            aiReasoning: "Good job. The diagram of the plant cell is mostly accurate, though the mitochondria labels are a bit blurry.",
-            answer: {
-                text: "The cell membrane protects the cell and controls what goes in and out. The nucleus contains DNA.",
-                diagrams: [
-                    "https://placehold.co/400x300?text=Plant+Cell+Diagram",
-                    "https://placehold.co/400x300?text=Nucleus+Detail"
-                ]
-            }
-        },
-        loading: false,
-        applyOverride: (score: number) => console.log(score)
+  const [grades, setGrades] = useState<FinalGrade[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchGrades = async () => {
+      try {
+        setLoading(true);
+        const data = await api.getGrades(submissionId);
+        setGrades(data);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch grades');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (submissionId) {
+      fetchGrades();
     }
-}
+  }, [submissionId]);
+
+  const applyOverride = async (questionId: string, score: number, reason: string) => {
+    try {
+      const updatedGrade = await api.captureOverride(submissionId, questionId, { score, reason });
+      setGrades((prev) => 
+        prev.map((g) => (g.question_id === questionId ? updatedGrade : g))
+      );
+      return updatedGrade;
+    } catch (err: any) {
+      throw new Error(err.message || 'Failed to apply override');
+    }
+  };
+
+  return {
+    grades,
+    loading,
+    error,
+    applyOverride,
+    refresh: async () => {
+      const data = await api.getGrades(submissionId);
+      setGrades(data);
+    }
+  };
+};
