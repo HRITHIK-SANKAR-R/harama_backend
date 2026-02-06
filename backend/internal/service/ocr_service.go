@@ -65,3 +65,7 @@ func (s *OCRService) ProcessSubmission(ctx context.Context, submissionID uuid.UU
 
 	return s.repo.SaveOCRResults(ctx, submissionID, finalResults)
 }
+
+func (s *OCRService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Submission, error) {
+	return s.repo.GetByID(ctx, id)
+}
