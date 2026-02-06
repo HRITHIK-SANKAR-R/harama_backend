@@ -949,7 +949,7 @@ Example: "Question 3 has 78% zero scores. Consider:
 
 ---
 
-### Feature E: Voice-Based Grading Review
+### Feature E: Voice-Based Grading Review (Planned for Future)
 
 **Teacher Voice Commands:**
 - "Accept all grades above 85%"
@@ -1286,7 +1286,7 @@ app = "haramma"
 - [ ] **Feature B: Handwriting Profiling**
 - [ ] **Feature C: Plagiarism Detection**
 - [X] **Feature D: Difficulty Calibration**: Implemented via Analytics Trends.
-- [ ] **Feature E: Voice Commands**
+- [ ] **Feature E: Voice Commands** (Future Stretch Goal - Not in current scope)
 - [X] **Feature F: Export & Integration**: CSV Export implemented.
 
 ---
