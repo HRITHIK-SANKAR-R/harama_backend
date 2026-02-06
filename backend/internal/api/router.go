@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"harama/internal/ai/gemini"
@@ -17,7 +18,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func NewRouter(cfg *config.Config, db *bun.DB) *chi.Mux {
+func NewRouter(cfg *config.Config, db *bun.DB) (*chi.Mux, error) {
 	r := chi.NewRouter()
 
 	// 1. Initialize Repositories
@@ -25,28 +26,38 @@ func NewRouter(cfg *config.Config, db *bun.DB) *chi.Mux {
 	subRepo := postgres.NewSubmissionRepo(db)
 	gradeRepo := postgres.NewGradeRepo(db)
 	feedbackRepo := postgres.NewFeedbackRepo(db)
+	auditRepo := postgres.NewAuditRepo(db)
 
 	// 2. Initialize AI Provider & Infrastructure
-	aiClient, _ := gemini.NewClient(cfg.GeminiAPIKey)
+	aiClient, err := gemini.NewClient(cfg.GeminiAPIKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize gemini client: %w", err)
+	}
 	
-	minioStorage, _ := storage.NewMinioStorage(
+	minioStorage, err := storage.NewMinioStorage(
 		cfg.MinioEndpoint,
 		cfg.MinioAccessKey,
 		cfg.MinioSecretKey,
 		cfg.MinioBucket,
 		cfg.MinioUseSSL,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize minio storage: %w", err)
+	}
 
-	visionProcessor, _ := ocr.NewGeminiOCRProcessor(cfg.GeminiAPIKey)
+	visionProcessor, err := ocr.NewGeminiOCRProcessor(cfg.GeminiAPIKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize gemini vision processor: %w", err)
+	}
 
 	// 3. Initialize Engine
 	gradingEngine := grading.NewEngine(aiClient)
 
 	// 4. Initialize Services
-	examService := service.NewExamService(examRepo)
-	ocrService := service.NewOCRService(subRepo, minioStorage, visionProcessor)
-	gradingService := service.NewGradingService(gradeRepo, examRepo, subRepo, gradingEngine)
-	feedbackService := service.NewFeedbackService(feedbackRepo, gradeRepo, examRepo, aiClient)
+	examService := service.NewExamService(examRepo, auditRepo)
+	ocrService := service.NewOCRService(subRepo, auditRepo, minioStorage, visionProcessor)
+	gradingService := service.NewGradingService(gradeRepo, examRepo, subRepo, auditRepo, gradingEngine)
+	feedbackService := service.NewFeedbackService(feedbackRepo, gradeRepo, examRepo, auditRepo, aiClient)
 
 	// 5. Initialize Handlers
 	examHandler := handlers.NewExamHandler(examService)
@@ -55,15 +66,17 @@ func NewRouter(cfg *config.Config, db *bun.DB) *chi.Mux {
 	feedbackHandler := handlers.NewFeedbackHandler(feedbackService)
 
 	// 6. Global Middleware
-	r.Use(middleware.TenantMiddleware)
-	r.Use(middleware.RateLimitMiddleware(middleware.NewIPRateLimiter(10, 20)))
+	r.Use(middleware.RateLimitMiddleware(middleware.NewIPRateLimiter(50, 100)))
 
-	// 7. Routes
+	// 7. Unprotected Routes
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
 
+	// 8. Protected API Routes
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(middleware.TenantMiddleware)
+
 		// Exam Routes
 		r.Post("/exams", examHandler.CreateExam)
 		r.Get("/exams/{id}", examHandler.GetExam)
@@ -82,5 +95,10 @@ func NewRouter(cfg *config.Config, db *bun.DB) *chi.Mux {
 		r.Get("/questions/{question_id}/analysis", feedbackHandler.AnalyzePatterns)
 	})
 
-	return r
-}
+	
+
+		return r, nil
+
+	}
+
+	

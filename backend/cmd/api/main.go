@@ -25,7 +25,10 @@ func main() {
     defer db.Close()
     
     // Initialize router
-    router := api.NewRouter(cfg, db)
+    router, err := api.NewRouter(cfg, db)
+    if err != nil {
+        log.Fatalf("Failed to initialize router: %v", err)
+    }
     
     // Start server
     srv := &http.Server{

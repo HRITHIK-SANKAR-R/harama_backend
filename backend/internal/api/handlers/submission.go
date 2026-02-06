@@ -43,6 +43,11 @@ func (h *SubmissionHandler) CreateSubmission(w http.ResponseWriter, r *http.Requ
 	// Hardcode tenant for now
 	sub.TenantID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
+	if err := h.ocrService.CreateSubmission(r.Context(), &sub); err != nil {
+		http.Error(w, "failed to create submission: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Trigger OCR processing (async in real app)
 	if err := h.ocrService.ProcessSubmission(r.Context(), sub.ID); err != nil {
 		// Log error but don't fail request? For now, fail.
