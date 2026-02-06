@@ -19,3 +19,10 @@ dist/
 
 # OS
 .DS_Store
+
+# Logs
+backend/api.log
+*.log
+
+# Binaries
+backend/harama-api
