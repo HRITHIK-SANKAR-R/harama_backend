@@ -14,14 +14,16 @@ type GradingService struct {
 	repo          *postgres.GradeRepo
 	examRepo      *postgres.ExamRepo
 	subRepo       *postgres.SubmissionRepo
+	auditRepo     *postgres.AuditRepo
 	gradingEngine *grading.Engine
 }
 
-func NewGradingService(repo *postgres.GradeRepo, examRepo *postgres.ExamRepo, subRepo *postgres.SubmissionRepo, engine *grading.Engine) *GradingService {
+func NewGradingService(repo *postgres.GradeRepo, examRepo *postgres.ExamRepo, subRepo *postgres.SubmissionRepo, auditRepo *postgres.AuditRepo, engine *grading.Engine) *GradingService {
 	return &GradingService{
 		repo:          repo,
 		examRepo:      examRepo,
 		subRepo:       subRepo,
+		auditRepo:     auditRepo,
 		gradingEngine: engine,
 	}
 }
@@ -63,6 +65,19 @@ func (s *GradingService) GradeSubmission(ctx context.Context, submissionID uuid.
 		if err != nil {
 			return err
 		}
+
+		// Log audit event for AI grading
+		_ = s.auditRepo.Save(ctx, &domain.AuditLog{
+			EntityType: "grade",
+			EntityID:   finalGrade.ID,
+			EventType:  "ai_graded",
+			ActorType:  "ai",
+			Changes: map[string]interface{}{
+				"score":      finalGrade.FinalScore,
+				"confidence": finalGrade.Confidence,
+				"reasoning":  finalGrade.Reasoning,
+			},
+		})
 
 		if multiEval.ShouldEscalate {
 			escalation := &domain.EscalationCase{

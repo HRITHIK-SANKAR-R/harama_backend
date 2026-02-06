@@ -16,17 +16,35 @@ type OCRProcessor interface {
 }
 
 type OCRService struct {
-	repo    *postgres.SubmissionRepo
-	storage *storage.MinioStorage
+	repo      *postgres.SubmissionRepo
+	auditRepo *postgres.AuditRepo
+	storage   *storage.MinioStorage
 	processor OCRProcessor
 }
 
-func NewOCRService(repo *postgres.SubmissionRepo, storage *storage.MinioStorage, processor OCRProcessor) *OCRService {
+func NewOCRService(repo *postgres.SubmissionRepo, auditRepo *postgres.AuditRepo, storage *storage.MinioStorage, processor OCRProcessor) *OCRService {
 	return &OCRService{
 		repo:      repo,
+		auditRepo: auditRepo,
 		storage:   storage,
 		processor: processor,
 	}
+}
+
+func (s *OCRService) CreateSubmission(ctx context.Context, sub *domain.Submission) error {
+	err := s.repo.Create(ctx, sub)
+	if err == nil {
+		_ = s.auditRepo.Save(ctx, &domain.AuditLog{
+			EntityType: "submission",
+			EntityID:   sub.ID,
+			EventType:  "created",
+			Changes: map[string]interface{}{
+				"exam_id":    sub.ExamID,
+				"student_id": sub.StudentID,
+			},
+		})
+	}
+	return err
 }
 
 func (s *OCRService) ProcessSubmission(ctx context.Context, submissionID uuid.UUID) error {
@@ -63,7 +81,18 @@ func (s *OCRService) ProcessSubmission(ctx context.Context, submissionID uuid.UU
 		finalResults = append(finalResults, *ocrResult)
 	}
 
-	return s.repo.SaveOCRResults(ctx, submissionID, finalResults)
+	err = s.repo.SaveOCRResults(ctx, submissionID, finalResults)
+	if err == nil {
+		_ = s.auditRepo.Save(ctx, &domain.AuditLog{
+			EntityType: "submission",
+			EntityID:   submissionID,
+			EventType:  "ocr_completed",
+			Changes: map[string]interface{}{
+				"pages_processed": len(finalResults),
+			},
+		})
+	}
+	return err
 }
 
 func (s *OCRService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Submission, error) {

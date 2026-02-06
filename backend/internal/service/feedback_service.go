@@ -14,14 +14,16 @@ type FeedbackService struct {
 	repo       *postgres.FeedbackRepo
 	gradeRepo  *postgres.GradeRepo
 	examRepo   *postgres.ExamRepo
+	auditRepo  *postgres.AuditRepo
 	aiProvider ai.Provider
 }
 
-func NewFeedbackService(repo *postgres.FeedbackRepo, gradeRepo *postgres.GradeRepo, examRepo *postgres.ExamRepo, aiProvider ai.Provider) *FeedbackService {
+func NewFeedbackService(repo *postgres.FeedbackRepo, gradeRepo *postgres.GradeRepo, examRepo *postgres.ExamRepo, auditRepo *postgres.AuditRepo, aiProvider ai.Provider) *FeedbackService {
 	return &FeedbackService{
 		repo:       repo,
 		gradeRepo:  gradeRepo,
 		examRepo:   examRepo,
+		auditRepo:  auditRepo,
 		aiProvider: aiProvider,
 	}
 }
@@ -60,6 +62,19 @@ func (s *FeedbackService) CaptureOverrideFeedback(ctx context.Context, submissio
 	if err != nil {
 		return err
 	}
+
+	// Log audit event for teacher override
+	_ = s.auditRepo.Save(ctx, &domain.AuditLog{
+		EntityType: "grade",
+		EntityID:   originalGrade.ID,
+		EventType:  "teacher_override",
+		ActorType:  "teacher",
+		Changes: map[string]interface{}{
+			"previous_score": aiScore,
+			"new_score":      teacherScore,
+			"reason":         teacherReason,
+		},
+	})
 
 	// 3. Log the feedback event
 	event := &domain.FeedbackEvent{
