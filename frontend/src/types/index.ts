@@ -78,7 +78,7 @@ export interface Exam {
   title: string;
   subject: string;
   questions?: Question[];
-  created_at: string;
+  createdAt: string;
   tenant_id: string;
 }
 
