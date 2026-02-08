@@ -14,7 +14,7 @@ fi
 
 # Start services
 echo "🐳 Starting PostgreSQL and MinIO..."
-docker-compose up -d postgres minio
+sudo docker compose up -d postgres minio
 
 # Wait for services
 echo "⏳ Waiting for services to be ready..."

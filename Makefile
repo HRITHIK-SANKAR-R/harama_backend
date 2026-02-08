@@ -33,13 +33,13 @@ migrate-down:
 	cd backend && go run ./cmd/migrate -direction=down
 
 docker-up:
-	docker-compose up -d
+	sudo docker compose up -d
 
 docker-down:
-	docker-compose down
+	sudo docker compose down
 
 docker-logs:
-	docker-compose logs -f
+	sudo docker compose logs -f
 
 clean:
 	rm -rf bin/
