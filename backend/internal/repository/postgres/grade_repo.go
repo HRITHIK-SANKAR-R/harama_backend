@@ -20,12 +20,13 @@ func (r *GradeRepo) SaveFinalGrade(ctx context.Context, grade *domain.FinalGrade
 	_, err := r.db.NewInsert().
 		Model(grade).
 		On("CONFLICT (submission_id, question_id) DO UPDATE").
-		Set("final_score = EXCLUDED.final_score").
-		Set("ai_score = EXCLUDED.ai_score").
-		Set("override_score = EXCLUDED.override_score").
+		Set("score = EXCLUDED.score").
 		Set("confidence = EXCLUDED.confidence").
 		Set("status = EXCLUDED.status").
-		Set("graded_by = EXCLUDED.graded_by").
+		Set("reasoning = EXCLUDED.reasoning").
+		Set("criteria_met = EXCLUDED.criteria_met").
+		Set("mistakes_found = EXCLUDED.mistakes_found").
+		Set("ai_evaluator_id = EXCLUDED.ai_evaluator_id").
 		Set("updated_at = EXCLUDED.updated_at").
 		Exec(ctx)
 	return err

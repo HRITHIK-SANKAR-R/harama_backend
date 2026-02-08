@@ -28,7 +28,13 @@ func NewGradingService(repo *postgres.GradeRepo, examRepo *postgres.ExamRepo, su
 	}
 }
 
-func (s *GradingService) GradeSubmission(ctx context.Context, submissionID uuid.UUID) error {
+func (s *GradingService) GradeSubmission(ctx context.Context, submissionID uuid.UUID) (err error) {
+	defer func() {
+		if err != nil {
+			_ = s.subRepo.UpdateStatus(ctx, submissionID, domain.StatusFailed)
+		}
+	}()
+
 	sub, err := s.subRepo.GetByID(ctx, submissionID)
 	if err != nil {
 		return err

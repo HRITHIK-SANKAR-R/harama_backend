@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
@@ -23,7 +24,8 @@ func NewGeminiOCRProcessor(apiKey string) (*GeminiOCRProcessor, error) {
 	}
 	
 	// Use Gemini 3 Flash for faster/cheaper OCR, or Pro for accuracy
-	model := client.GenerativeModel("gemini-3-flash") 
+		model := client.GenerativeModel("gemini-3-flash-preview")
+	 
 	model.SetTemperature(0.1) // Low temperature for deterministic transcription
 	
 	return &GeminiOCRProcessor{
@@ -49,8 +51,26 @@ func (p *GeminiOCRProcessor) ExtractText(ctx context.Context, fileBytes []byte, 
 		imgData = genai.ImageData(mimeType, fileBytes)
 	}
 
-	resp, err := p.model.GenerateContent(ctx, prompt, imgData)
-	if err != nil {
+	var resp *genai.GenerateContentResponse
+	var err error
+
+	// Retry loop for 429 Rate Limits
+	maxRetries := 3
+	for i := 0; i <= maxRetries; i++ {
+		resp, err = p.model.GenerateContent(ctx, prompt, imgData)
+		if err == nil {
+			break
+		}
+		
+		if strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "quota") {
+			if i < maxRetries {
+				// Increased backoff: 15s, 30s, 60s to handle free tier limits
+				waitTime := time.Duration(15*(1<<i)) * time.Second
+				fmt.Printf("⚠️ OCR Rate limit hit. Retrying in %v... (Attempt %d/%d)\n", waitTime, i+1, maxRetries)
+				time.Sleep(waitTime)
+				continue
+			}
+		}
 		return nil, fmt.Errorf("gemini ocr error: %w", err)
 	}
 

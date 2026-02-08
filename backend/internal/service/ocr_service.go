@@ -47,7 +47,13 @@ func (s *OCRService) CreateSubmission(ctx context.Context, sub *domain.Submissio
 	return err
 }
 
-func (s *OCRService) ProcessSubmission(ctx context.Context, submissionID uuid.UUID) error {
+func (s *OCRService) ProcessSubmission(ctx context.Context, submissionID uuid.UUID) (err error) {
+	defer func() {
+		if err != nil {
+			_ = s.repo.UpdateStatus(ctx, submissionID, domain.StatusFailed)
+		}
+	}()
+
 	// 1. Get submission metadata
 	sub, err := s.repo.GetByID(ctx, submissionID)
 	if err != nil {
@@ -70,7 +76,7 @@ func (s *OCRService) ProcessSubmission(ctx context.Context, submissionID uuid.UU
 		}
 
 		// TODO: Determine mime type from file extension
-		mimeType := "image/png" 
+		mimeType := "png" 
 		ocrResult, err := s.processor.ExtractText(ctx, imgBytes, mimeType)
 		if err != nil {
 			return fmt.Errorf("failed to extract text: %w", err)

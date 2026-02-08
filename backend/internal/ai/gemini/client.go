@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
@@ -67,19 +68,34 @@ func (c *Client) Grade(ctx context.Context, req ai.GradingRequest) (domain.Gradi
 
 	// Add diagrams if present (Phase 2)
 	for _, diagramURL := range req.Answer.Diagrams {
-		// In a real scenario, we might need to download the image from MinIO
-		// or pass the bytes directly if we have them.
-		// For now, we'll assume the request might include bytes or we use a helper.
-		// Mock: adding a placeholder if we were to pass image data
-		// parts = append(parts, genai.ImageData("image/png", diagramBytes))
 		_ = diagramURL // Use URL to fetch or placeholder
 	}
 
 	// Call Gemini
-	resp, err := c.model.GenerateContent(ctx, parts...)
-	if err != nil {
+	fmt.Printf("DEBUG: Calling Gemini for evaluator %s...\n", req.EvaluatorID)
+	
+	var resp *genai.GenerateContentResponse
+	var err error
+	maxRetries := 3
+
+	for i := 0; i <= maxRetries; i++ {
+		resp, err = model.GenerateContent(ctx, parts...)
+		if err == nil {
+			break
+		}
+		if strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "quota") {
+			if i < maxRetries {
+				// Increased backoff: 15s, 30s, 60s
+				waitTime := time.Duration(15*(1<<i)) * time.Second
+				fmt.Printf("⚠️ Grading Rate limit hit. Retrying in %v... (Attempt %d/%d)\n", waitTime, i+1, maxRetries)
+				time.Sleep(waitTime)
+				continue
+			}
+		}
 		return domain.GradingResult{}, fmt.Errorf("gemini API error: %w", err)
 	}
+
+	fmt.Printf("DEBUG: Gemini returned (err=%v)\n", err)
 
 	// Parse structured response
 	var result domain.GradingResult
