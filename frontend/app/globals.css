@@ -1,0 +1,297 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Premium Floating Blob Animation */
+  @keyframes blob {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    25% {
+      transform: translate(20px, -50px) scale(1.1);
+    }
+    50% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    75% {
+      transform: translate(50px, 50px) scale(1.05);
+    }
+  }
+
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  /* Glow Animation */
+  @keyframes glow {
+    0%, 100% {
+      box-shadow: 0 0 5px rgba(0, 255, 255, 0.5), 0 0 10px rgba(0, 255, 255, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.5);
+    }
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  /* Pulse Neon */
+  @keyframes pulse-neon {
+    0%, 100% {
+      opacity: 1;
+      filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));
+    }
+    50% {
+      opacity: 0.8;
+      filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.8));
+    }
+  }
+
+  .animate-pulse-neon {
+    animation: pulse-neon 2s ease-in-out infinite;
+  }
+
+  /* Float Up */
+  @keyframes float-up {
+    0% {
+      transform: translateY(0px);
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+  }
+
+  .animate-float-up {
+    animation: float-up 3s ease-in infinite;
+  }
+
+  /* Shimmer Effect */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.2) 20%,
+      rgba(255, 255, 255, 0) 40%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Scale In */
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.5s ease-out;
+  }
+
+  /* Slide In */
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(100px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.5s ease-out;
+  }
+
+  /* Gradient Shift */
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .animate-gradient-shift {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+  }
+
+  /* Neon Border Glow */
+  @keyframes neon-glow {
+    0% {
+      box-shadow: 
+        0 0 10px rgba(0, 255, 255, 0.5),
+        inset 0 0 10px rgba(0, 255, 255, 0.1);
+    }
+    50% {
+      box-shadow: 
+        0 0 30px rgba(0, 255, 255, 0.8),
+        inset 0 0 20px rgba(0, 255, 255, 0.2);
+    }
+    100% {
+      box-shadow: 
+        0 0 10px rgba(0, 255, 255, 0.5),
+        inset 0 0 10px rgba(0, 255, 255, 0.1);
+    }
+  }
+
+  .animate-neon-glow {
+    animation: neon-glow 2s ease-in-out infinite;
+  }
+}
+
+@layer base {
+  :root {
+    /* Professional Dark Theme */
+    --background: 220 13% 8%;
+    --foreground: 0 0% 98%;
+    --card: 220 13% 13%;
+    --card-foreground: 0 0% 98%;
+    --popover: 220 13% 13%;
+    --popover-foreground: 0 0% 98%;
+    
+    /* Primary: Professional Blue */
+    --primary: 217 91% 60%;
+    --primary-foreground: 220 13% 8%;
+    
+    /* Secondary: Professional Purple */
+    --secondary: 262 80% 50%;
+    --secondary-foreground: 0 0% 100%;
+    
+    /* Muted: Medium Gray */
+    --muted: 220 13% 35%;
+    --muted-foreground: 0 0% 70%;
+    
+    /* Accent: Bright Blue */
+    --accent: 217 91% 60%;
+    --accent-foreground: 220 13% 8%;
+    
+    /* Destructive: Red */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* UI Elements */
+    --border: 220 13% 22%;
+    --input: 220 13% 18%;
+    --ring: 217 91% 60%;
+    
+    /* Chart Colors */
+    --chart-1: 217 91% 60%;
+    --chart-2: 262 80% 50%;
+    --chart-3: 199 89% 48%;
+    --chart-4: 48 96% 53%;
+    --chart-5: 0 84% 60%;
+    
+    /* Radius */
+    --radius: 0.75rem;
+    
+    /* Sidebar - Darker shade */
+    --sidebar-background: 220 13% 11%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 220 13% 8%;
+    --sidebar-accent: 262 80% 50%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 13% 22%;
+    --sidebar-ring: 217 91% 60%;
+  }
+  
+  .dark {
+    --background: 220 13% 8%;
+    --foreground: 0 0% 98%;
+    --card: 220 13% 13%;
+    --card-foreground: 0 0% 98%;
+    --popover: 220 13% 13%;
+    --popover-foreground: 0 0% 98%;
+    
+    --primary: 217 91% 60%;
+    --primary-foreground: 220 13% 8%;
+    
+    --secondary: 262 80% 50%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 220 13% 35%;
+    --muted-foreground: 0 0% 70%;
+    
+    --accent: 217 91% 60%;
+    --accent-foreground: 220 13% 8%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 220 13% 22%;
+    --input: 220 13% 18%;
+    --ring: 217 91% 60%;
+    
+    --chart-1: 217 91% 60%;
+    --chart-2: 262 80% 50%;
+    --chart-3: 199 89% 48%;
+    --chart-4: 48 96% 53%;
+    --chart-5: 0 84% 60%;
+    
+    --sidebar-background: 220 13% 11%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 220 13% 8%;
+    --sidebar-accent: 262 80% 50%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 13% 22%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

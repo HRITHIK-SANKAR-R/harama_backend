@@ -54,7 +54,7 @@ func main() {
 	ocrService := service.NewOCRService(submissionRepo, auditRepo, minioClient, ocrProcessor)
 
 	// Read answer.jpeg
-	imageData, err := os.ReadFile("../../answer.jpeg")
+	imageData, err := os.ReadFile("answer.jpeg")
 	if err != nil {
 		log.Fatal("Failed to read answer.jpeg:", err)
 	}
