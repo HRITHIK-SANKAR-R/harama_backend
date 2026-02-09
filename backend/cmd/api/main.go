@@ -22,6 +22,22 @@ func main() {
         log.Fatalf("Failed to connect to database: %v", err)
     }
     defer db.Close()
+
+    // Cleanup: Reset stuck jobs
+    log.Println("Cleaning up stuck jobs...")
+    res, err := db.NewUpdate().
+        Table("submissions").
+        Set("processing_status = ?", "failed").
+        Where("processing_status = ?", "processing").
+        Exec(context.Background())
+    if err != nil {
+        log.Printf("⚠️ Failed to cleanup stuck jobs: %v", err)
+    } else {
+        count, _ := res.RowsAffected()
+        if count > 0 {
+            log.Printf("🔄 Reset %d stuck submissions to 'failed'", count)
+        }
+    }
     
     // Initialize router
     router, err := api.NewRouter(cfg, db)

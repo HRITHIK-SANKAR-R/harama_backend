@@ -4,16 +4,13 @@ import (
 	"context"
 	"log"
 	"sync"
-)
 
-type Job interface {
-	Execute(ctx context.Context) error
-	ID() string
-}
+	"harama/internal/types"
+)
 
 type WorkerPool struct {
 	numWorkers int
-	jobQueue   chan Job
+	jobQueue   chan types.Job
 	wg         sync.WaitGroup
 	ctx        context.Context
 	cancel     context.CancelFunc
@@ -23,7 +20,7 @@ func NewWorkerPool(numWorkers int, bufferSize int) *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &WorkerPool{
 		numWorkers: numWorkers,
-		jobQueue:   make(chan Job, bufferSize),
+		jobQueue:   make(chan types.Job, bufferSize),
 		ctx:        ctx,
 		cancel:     cancel,
 	}
@@ -39,6 +36,11 @@ func (p *WorkerPool) Start() {
 
 func (p *WorkerPool) worker(id int) {
 	defer p.wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("CRITICAL: Worker %d panicked: %v", id, r)
+		}
+	}()
 	log.Printf("Worker %d ready", id)
 
 	for {
@@ -60,7 +62,7 @@ func (p *WorkerPool) worker(id int) {
 	}
 }
 
-func (p *WorkerPool) Submit(job Job) {
+func (p *WorkerPool) Submit(job types.Job) {
 	p.jobQueue <- job
 }
 

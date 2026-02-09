@@ -50,7 +50,7 @@ sleep 5
 # 6. Run the Test
 echo -e "${BLUE}🧪 Running Test...${NC}"
 echo "----------------------------------------"
-go run scripts/e2e_test/main.go -file scripts/e2e_test/test1.jpeg
+go run scripts/e2e_test/main.go -file scripts/e2e_test/test.png
 TEST_EXIT_CODE=$?
 echo "----------------------------------------"
 

@@ -9,6 +9,8 @@ import (
 	"harama/internal/ai"
 	"harama/internal/domain"
 	"harama/internal/pkg/utils"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type Engine struct {
@@ -54,43 +56,38 @@ func (e *Engine) multiEvaluatorGrade(ctx context.Context, answer domain.AnswerSe
 		"structural_analyzer",
 	}
 
-	type resultTask struct {
-		result domain.GradingResult
-		err    error
-	}
-	resChan := make(chan resultTask, len(evaluatorIDs))
+	g, ctx := errgroup.WithContext(ctx)
+	results := make([]domain.GradingResult, len(evaluatorIDs))
+	var mu sync.Mutex
 
-	var wg sync.WaitGroup
-	for _, id := range evaluatorIDs {
-		wg.Add(1)
-		go func(evalID string) {
-			defer wg.Done()
+	for i, id := range evaluatorIDs {
+		// Capture loop variables
+		i, id := i, id
+		g.Go(func() error {
 			res, err := e.aiProvider.Grade(ctx, ai.GradingRequest{
 				Answer:       answer,
 				Rubric:       rubric,
-				EvaluatorID:  evalID,
+				EvaluatorID:  id,
 				Subject:      subject,
 				QuestionText: questionText,
 			})
-			resChan <- resultTask{res, err}
-		}(id)
+			if err != nil {
+				return err
+			}
+
+			// Recalculate score to ensure rubric compliance
+			calcScore, _ := e.partialCredit.CalculateScore(rubric, res.CriteriaMet)
+			res.Score = calcScore
+
+			mu.Lock()
+			results[i] = res
+			mu.Unlock()
+			return nil
+		})
 	}
 
-	wg.Wait()
-	close(resChan)
-
-	var results []domain.GradingResult
-	for res := range resChan {
-		if res.err != nil {
-			return nil, res.err
-		}
-
-		// Recalculate score to ensure rubric compliance
-		// This enforces that the score matches the sum of identified criteria
-		calcScore, _ := e.partialCredit.CalculateScore(rubric, res.result.CriteriaMet)
-		res.result.Score = calcScore
-
-		results = append(results, res.result)
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	// Analyze multi-eval results

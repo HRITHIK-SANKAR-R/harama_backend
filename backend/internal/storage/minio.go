@@ -59,3 +59,11 @@ func (s *MinioStorage) GetFile(ctx context.Context, objectName string) ([]byte, 
 
 	return io.ReadAll(object)
 }
+
+func (s *MinioStorage) GetPresignedURL(ctx context.Context, objectName string, expiry time.Duration) (string, error) {
+	presignedURL, err := s.client.PresignedGetObject(ctx, s.bucketName, objectName, expiry, url.Values{})
+	if err != nil {
+		return "", err
+	}
+	return presignedURL.String(), nil
+}

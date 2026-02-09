@@ -18,3 +18,11 @@ type ExamServiceInterface interface {
 
 // Ensure ExamService implements the interface
 var _ ExamServiceInterface = (*ExamService)(nil)
+
+type OCRServiceInterface interface {
+	ProcessSubmission(ctx context.Context, submissionID uuid.UUID) error
+}
+
+type GradingServiceInterface interface {
+	GradeSubmission(ctx context.Context, submissionID uuid.UUID) error
+}

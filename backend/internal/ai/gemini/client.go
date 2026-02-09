@@ -79,7 +79,10 @@ func (c *Client) Grade(ctx context.Context, req ai.GradingRequest) (domain.Gradi
 	maxRetries := 3
 
 	for i := 0; i <= maxRetries; i++ {
-		resp, err = model.GenerateContent(ctx, parts...)
+		timeoutCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+		resp, err = model.GenerateContent(timeoutCtx, parts...)
+		cancel()
+
 		if err == nil {
 			break
 		}

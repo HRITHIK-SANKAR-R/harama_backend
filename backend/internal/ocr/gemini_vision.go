@@ -57,7 +57,11 @@ func (p *GeminiOCRProcessor) ExtractText(ctx context.Context, fileBytes []byte, 
 	// Retry loop for 429 Rate Limits
 	maxRetries := 3
 	for i := 0; i <= maxRetries; i++ {
-		resp, err = p.model.GenerateContent(ctx, prompt, imgData)
+		// Create a context with timeout for each attempt to prevent hanging
+		timeoutCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+		resp, err = p.model.GenerateContent(timeoutCtx, prompt, imgData)
+		cancel() // Ensure we release resources
+
 		if err == nil {
 			break
 		}

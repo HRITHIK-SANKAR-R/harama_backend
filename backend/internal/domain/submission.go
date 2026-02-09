@@ -23,10 +23,18 @@ type Submission struct {
 type ProcessingStatus string
 
 const (
+	StatusQueued        ProcessingStatus = "queued"
+	StatusOCRProcessing ProcessingStatus = "ocr_processing"
+	StatusOCRDone       ProcessingStatus = "ocr_done"
+	StatusOCRFailed     ProcessingStatus = "ocr_failed"
+	StatusOCRTimeout    ProcessingStatus = "ocr_timeout"
+	StatusGrading       ProcessingStatus = "grading"
+	StatusCompleted     ProcessingStatus = "completed"
+	StatusFailed        ProcessingStatus = "failed"
+	
+	// Deprecated but kept for compatibility during migration if needed
 	StatusPending    ProcessingStatus = "pending"
 	StatusProcessing ProcessingStatus = "processing"
-	StatusCompleted  ProcessingStatus = "completed"
-	StatusFailed     ProcessingStatus = "failed"
 )
 
 type OCRResult struct {

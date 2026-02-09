@@ -34,10 +34,39 @@ func (r *SubmissionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Sub
 }
 
 func (r *SubmissionRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.ProcessingStatus) error {
+	// Enforce forward-only transitions in SQL to prevent race conditions or backward jumps
+	// queued -> ocr_processing -> (ocr_done | ocr_failed | ocr_timeout) -> grading -> completed | failed
 	_, err := r.db.NewUpdate().
 		Model((*domain.Submission)(nil)).
 		Set("processing_status = ?", status).
 		Where("id = ?", id).
+		// Only allow updating if the current status is earlier in the pipeline
+		// We use a CASE expression to define the rank/order of states
+		Where(`(
+			CASE processing_status 
+				WHEN 'queued' THEN 1 
+				WHEN 'ocr_processing' THEN 2 
+				WHEN 'ocr_done' THEN 3 
+				WHEN 'ocr_failed' THEN 3 
+				WHEN 'ocr_timeout' THEN 3 
+				WHEN 'grading' THEN 4 
+				WHEN 'completed' THEN 5 
+				WHEN 'failed' THEN 5 
+				ELSE 0 
+			END
+		) < (
+			CASE ? 
+				WHEN 'queued' THEN 1 
+				WHEN 'ocr_processing' THEN 2 
+				WHEN 'ocr_done' THEN 3 
+				WHEN 'ocr_failed' THEN 3 
+				WHEN 'ocr_timeout' THEN 3 
+				WHEN 'grading' THEN 4 
+				WHEN 'completed' THEN 5 
+				WHEN 'failed' THEN 5 
+				ELSE 0 
+			END
+		)`, status).
 		Exec(ctx)
 	return err
 }

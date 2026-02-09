@@ -75,6 +75,25 @@ func (h *SubmissionHandler) TriggerGrading(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Fix #1: Verify status before grading
+	sub, err := h.ocrService.GetByID(r.Context(), subID)
+	if err != nil {
+		http.Error(w, "submission not found", http.StatusNotFound)
+		return
+	}
+
+	allowed := map[domain.ProcessingStatus]bool{
+		domain.StatusOCRDone:    true,
+		domain.StatusOCRTimeout: true,
+		domain.StatusOCRFailed:  true,
+		domain.StatusQueued:     true, // Allow manual override if needed
+	}
+
+	if !allowed[sub.ProcessingStatus] {
+		http.Error(w, "cannot trigger grading: OCR still in progress", http.StatusConflict)
+		return
+	}
+
 	// Submit grading job to worker pool
 	h.workerPool.Submit(&jobs.GradingJob{
 		SubmissionID: subID,

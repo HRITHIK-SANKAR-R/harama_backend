@@ -14,8 +14,11 @@ import (
 	"harama/internal/service"
 	"harama/internal/storage"
 	"harama/internal/worker"
+	"harama/internal/types"
+	"harama/internal/worker/jobs"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 )
 
@@ -55,11 +58,29 @@ func NewRouter(cfg *config.Config, db *bun.DB) (*chi.Mux, error) {
 	gradingEngine := grading.NewEngine(aiClient)
 	workerPool := worker.NewWorkerPool(5, 100)
 	workerPool.Start()
+	eventService := service.NewEventService()
 
 	// 4. Initialize Services
 	examService := service.NewExamService(examRepo, auditRepo)
-	ocrService := service.NewOCRService(subRepo, auditRepo, minioStorage, visionProcessor)
-	gradingService := service.NewGradingService(gradeRepo, examRepo, subRepo, auditRepo, gradingEngine)
+	gradingService := service.NewGradingService(gradeRepo, examRepo, subRepo, auditRepo, gradingEngine, eventService)
+	
+	// Create factory to break circular dependency
+	gradingJobFactory := func(subID uuid.UUID) types.Job {
+		return &jobs.GradingJob{
+			SubmissionID: subID,
+			Service:      gradingService,
+		}
+	}
+
+	ocrService := service.NewOCRService(
+		subRepo, 
+		auditRepo, 
+		minioStorage, 
+		visionProcessor, 
+		eventService, 
+		workerPool, 
+		gradingJobFactory,
+	)
 	feedbackService := service.NewFeedbackService(feedbackRepo, gradeRepo, examRepo, auditRepo, aiClient)
 	analyticsService := service.NewAnalyticsService(gradeRepo, examRepo, subRepo)
 	auditService := service.NewAuditService(auditRepo)
@@ -100,6 +121,7 @@ func NewRouter(cfg *config.Config, db *bun.DB) (*chi.Mux, error) {
 		// Submission Routes
 		r.Post("/exams/{id}/submissions", submissionHandler.CreateSubmission)
 		r.Get("/submissions/{id}", submissionHandler.GetSubmission)
+		r.Get("/submissions/events", eventService.ServeHTTP)
 		r.Post("/submissions/{id}/trigger-grading", submissionHandler.TriggerGrading)
 
 		// Grading & Feedback Routes

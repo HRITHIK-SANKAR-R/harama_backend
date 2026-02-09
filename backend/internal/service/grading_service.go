@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"time"
+
 	"harama/internal/domain"
 	"harama/internal/grading"
 	"harama/internal/pkg/utils"
@@ -16,24 +19,46 @@ type GradingService struct {
 	subRepo       *postgres.SubmissionRepo
 	auditRepo     *postgres.AuditRepo
 	gradingEngine *grading.Engine
+	events        *EventService
 }
 
-func NewGradingService(repo *postgres.GradeRepo, examRepo *postgres.ExamRepo, subRepo *postgres.SubmissionRepo, auditRepo *postgres.AuditRepo, engine *grading.Engine) *GradingService {
+func NewGradingService(repo *postgres.GradeRepo, examRepo *postgres.ExamRepo, subRepo *postgres.SubmissionRepo, auditRepo *postgres.AuditRepo, engine *grading.Engine, events *EventService) *GradingService {
 	return &GradingService{
 		repo:          repo,
 		examRepo:      examRepo,
 		subRepo:       subRepo,
 		auditRepo:     auditRepo,
 		gradingEngine: engine,
+		events:        events,
 	}
 }
 
-func (s *GradingService) GradeSubmission(ctx context.Context, submissionID uuid.UUID) (err error) {
+func (s *GradingService) updateStatus(ctx context.Context, id uuid.UUID, status domain.ProcessingStatus) {
+	_ = s.subRepo.UpdateStatus(ctx, id, status)
+	if s.events != nil {
+		s.events.Broadcast(Event{
+			SubmissionID: id,
+			Type:         EventStatusUpdate,
+			Status:       string(status),
+		})
+	}
+}
+
+func (s *GradingService) GradeSubmission(ctx context.Context, submissionID uuid.UUID) (finalErr error) {
+	startTime := time.Now()
 	defer func() {
-		if err != nil {
-			_ = s.subRepo.UpdateStatus(ctx, submissionID, domain.StatusFailed)
+		duration := time.Since(startTime)
+		if finalErr != nil {
+			fmt.Printf("❌ Grading failed for submission %s after %v: %v\n", submissionID, duration, finalErr)
+			s.updateStatus(context.Background(), submissionID, domain.StatusFailed)
+		} else {
+			fmt.Printf("✅ Grading completed for submission %s in %v\n", submissionID, duration)
+			s.updateStatus(context.Background(), submissionID, domain.StatusCompleted)
 		}
 	}()
+
+	// 1. Mark as grading
+	s.updateStatus(ctx, submissionID, domain.StatusGrading)
 
 	sub, err := s.subRepo.GetByID(ctx, submissionID)
 	if err != nil {
@@ -43,6 +68,27 @@ func (s *GradingService) GradeSubmission(ctx context.Context, submissionID uuid.
 	exam, err := s.examRepo.GetByID(ctx, sub.ExamID)
 	if err != nil {
 		return err
+	}
+
+	// If there are no answers, it might be because OCR failed or segmentation hasn't happened.
+	// We check if we can generate a fallback answer from raw OCR text if available.
+	if len(sub.Answers) == 0 && len(sub.OCRResults) > 0 {
+		fmt.Printf("⚠️ No answer segments found for submission %s. Attempting fallback from raw OCR text.\n", submissionID)
+		// Simple fallback: map first question to all OCR text
+		if len(exam.Questions) > 0 {
+			fullText := ""
+			for _, res := range sub.OCRResults {
+				fullText += res.RawText + "\n"
+			}
+			sub.Answers = []domain.AnswerSegment{
+				{
+					ID:           uuid.New(),
+					SubmissionID: sub.ID,
+					QuestionID:   exam.Questions[0].ID,
+					Text:         fullText,
+				},
+			}
+		}
 	}
 
 	for _, answer := range sub.Answers {

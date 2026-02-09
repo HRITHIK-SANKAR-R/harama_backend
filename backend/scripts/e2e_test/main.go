@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	BaseURL = "http://localhost:8081/api/v1"
+	BaseURL = "http://127.0.0.1:8081/api/v1"
 )
 
 type Tenant struct {
@@ -88,21 +88,15 @@ func main() {
 		log.Fatalf("Failed to create submission: %v", err)
 	}
 
-	// 5. Wait for OCR (Simulate Frontend Logic)
+	// 5. Wait for OCR (Backend now auto-triggers grading after OCR)
 	log.Println("5. Waiting for AI to read handwriting (OCR)...")
 	
 	// Poll DB for OCR results and then link it to the question
 	ocrText := waitForOCRAndLink(db, subID, questionID)
-	log.Printf("   AI Read: %q", ocrText)
+	log.Printf("   OCR Phase Result: %q", ocrText)
 
-	// 6. Trigger Grading
-	log.Println("6. Triggering AI Grading...")
-	if err := triggerGrading(tenantID, subID); err != nil {
-		log.Fatalf("Failed to trigger grading: %v", err)
-	}
-
-	// 7. Poll for Results
-	log.Println("7. Polling for Final Grade...")
+	// 6. Poll for Results (Triggering is now automatic)
+	log.Println("6. Polling for Final Grade...")
 	for i := 0; i < 100; i++ {
 		grades, err := getGrades(tenantID, subID)
 		if err == nil && len(grades) > 0 {
@@ -151,10 +145,31 @@ func waitForOCRAndLink(db *bun.DB, subID, questionID string) string {
 		if i % 5 == 0 {
 			log.Printf("   Waiting... Current Status: %s", sub.ProcessingStatus)
 		}
+
+		// Fix #2 & #4: Stop polling if OCR is done, timed out, or grading has already started
+		if sub.ProcessingStatus == domain.StatusOCRDone || 
+		   sub.ProcessingStatus == domain.StatusOCRTimeout || 
+		   sub.ProcessingStatus == domain.StatusGrading || 
+		   sub.ProcessingStatus == domain.StatusCompleted {
+			
+			log.Printf("   OCR Phase Finished with status: %s", sub.ProcessingStatus)
+			
+			// If we already have OCR results, return them
+			if len(sub.OCRResults) > 0 {
+				extractedText := sub.OCRResults[0].RawText
+				if extractedText != "" {
+					return extractedText
+				}
+			}
+			
+			if sub.ProcessingStatus == domain.StatusOCRTimeout {
+				return "OCR Timeout Fallback"
+			}
+			
+			break
+		}
 		
 		// Note: Our backend marks OCR as "failed" if text is empty/bad, but "completed" if it works.
-		// However, "failed" stops the pipeline. We need to revive it for this test.
-		
 		if len(sub.OCRResults) > 0 {
 			extractedText := sub.OCRResults[0].RawText
 			if extractedText != "" {
@@ -165,11 +180,11 @@ func waitForOCRAndLink(db *bun.DB, subID, questionID string) string {
 					QuestionID:   uuid.MustParse(questionID),
 					Text:         extractedText,
 				}
-			sub.Answers = []domain.AnswerSegment{answer}
-			sub.ProcessingStatus = domain.StatusPending // Reset status so Grading Worker picks it up
-			
-			_, _ = db.NewUpdate().Model(&sub).Column("answers", "processing_status").Where("id = ?", subID).Exec(ctx)
-			return extractedText
+				sub.Answers = []domain.AnswerSegment{answer}
+				sub.ProcessingStatus = domain.StatusPending // Reset status so Grading Worker picks it up
+				
+				_, _ = db.NewUpdate().Model(&sub).Column("answers", "processing_status").Where("id = ?", subID).Exec(ctx)
+				return extractedText
 			}
 		}
 		
