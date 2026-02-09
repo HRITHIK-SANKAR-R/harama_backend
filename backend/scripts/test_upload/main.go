@@ -54,7 +54,7 @@ func main() {
 	ocrService := service.NewOCRService(submissionRepo, auditRepo, minioClient, ocrProcessor)
 
 	// Read answer.jpeg
-	imageData, err := os.ReadFile("answer.jpeg")
+	imageData, err := os.ReadFile("../../answer.jpeg")
 	if err != nil {
 		log.Fatal("Failed to read answer.jpeg:", err)
 	}
@@ -113,7 +113,12 @@ func main() {
 
 	// Trigger OCR
 	log.Println("⏳ Running OCR...")
-	if err := ocrService.ProcessSubmission(ctx, submissionID); err != nil {
+	
+	// Create a context with a generous timeout for the OCR operation
+	ocrCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	if err := ocrService.ProcessSubmission(ocrCtx, submissionID); err != nil {
 		log.Fatal("OCR failed:", err)
 	}
 
