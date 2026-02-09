@@ -1,42 +1,34 @@
 package middleware
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"harama/internal/auth"
 	"net/http"
 	"strings"
-
-	"harama/internal/auth"
+	"time"
 
 	"github.com/google/uuid"
 )
 
-// SupabaseAuthMiddleware validates Supabase JWT tokens from the Authorization header.
-// It extracts the user's sub (user_id) claim and uses it as the tenant_id.
-// Falls back to X-Tenant-ID header for development/backward compatibility.
-func SupabaseAuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
+// SupabaseAuthMiddleware validates Supabase JWT tokens by calling Supabase Auth API.
+// This supports both HS256 and ES256 tokens and ensures the token is not revoked.
+func SupabaseAuthMiddleware(supabaseURL, anonKey, jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Try Authorization: Bearer <token> first
 			authHeader := r.Header.Get("Authorization")
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				token := strings.TrimPrefix(authHeader, "Bearer ")
-				claims, err := validateHS256JWT(token, jwtSecret)
+				
+				// Validate with Supabase API
+				user, err := validateTokenWithSupabase(token, supabaseURL, anonKey)
 				if err != nil {
-					http.Error(w, "invalid or expired token", http.StatusUnauthorized)
+					http.Error(w, "invalid or expired token: "+err.Error(), http.StatusUnauthorized)
 					return
 				}
 
-				// Extract user ID from 'sub' claim
-				sub, ok := claims["sub"].(string)
-				if !ok || sub == "" {
-					http.Error(w, "token missing sub claim", http.StatusUnauthorized)
-					return
-				}
-
-				userID, err := uuid.Parse(sub)
+				userID, err := uuid.Parse(user.ID)
 				if err != nil {
 					http.Error(w, "invalid user id in token", http.StatusUnauthorized)
 					return
@@ -66,44 +58,36 @@ func SupabaseAuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	}
 }
 
-// validateHS256JWT performs a minimal HS256 JWT validation.
-// For production, consider using a full JWT library with expiry checks.
-func validateHS256JWT(tokenStr, secret string) (map[string]interface{}, error) {
-	parts := strings.Split(tokenStr, ".")
-	if len(parts) != 3 {
-		return nil, errInvalidToken
-	}
+type SupabaseUser struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
+}
 
-	// Verify signature
-	signingInput := parts[0] + "." + parts[1]
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(signingInput))
-	expectedSig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
-
-	if !hmac.Equal([]byte(parts[2]), []byte(expectedSig)) {
-		return nil, errInvalidToken
-	}
-
-	// Decode payload
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+func validateTokenWithSupabase(token, supabaseURL, anonKey string) (*SupabaseUser, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest("GET", supabaseURL+"/auth/v1/user", nil)
 	if err != nil {
-		return nil, errInvalidToken
+		return nil, err
 	}
 
-	var claims map[string]interface{}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil, errInvalidToken
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("apikey", anonKey)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("supabase rejected token: %s", resp.Status)
 	}
 
-	return claims, nil
-}
+	var user SupabaseUser
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		return nil, err
+	}
 
-var errInvalidToken = &tokenError{msg: "invalid token"}
-
-type tokenError struct {
-	msg string
-}
-
-func (e *tokenError) Error() string {
-	return e.msg
+	return &user, nil
 }

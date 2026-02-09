@@ -39,6 +39,7 @@ func (r *ExamRepo) ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]doma
 	var exams []domain.Exam
 	err := r.db.NewSelect().
 		Model(&exams).
+		Relation("Questions").
 		Where("tenant_id = ?", tenantID).
 		Order("created_at DESC").
 		Scan(ctx)

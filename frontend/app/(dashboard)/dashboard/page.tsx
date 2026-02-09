@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { listExams } from '@/lib/api'
+import { listExams, getGradingTrends } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -38,8 +38,7 @@ export default function DashboardPage() {
 
         const [examsData, trendsData] = await Promise.all([
           listExams().catch(() => []),
-          // getGradingTrends requires exam_id; skip on dashboard overview
-          Promise.resolve(null),
+          getGradingTrends().catch(() => null),
         ])
 
         setExams(examsData || [])

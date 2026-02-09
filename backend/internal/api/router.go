@@ -85,7 +85,7 @@ func NewRouter(cfg *config.Config, db *bun.DB) (*chi.Mux, error) {
 	r.Route("/api/v1", func(r chi.Router) {
 		// Use Supabase JWT auth with X-Tenant-ID fallback for dev
 		if cfg.SupabaseJWTSecret != "" {
-			r.Use(middleware.SupabaseAuthMiddleware(cfg.SupabaseJWTSecret))
+			r.Use(middleware.SupabaseAuthMiddleware(cfg.SupabaseURL, cfg.SupabaseAnonKey, cfg.SupabaseJWTSecret))
 		} else {
 			r.Use(middleware.TenantMiddleware)
 		}

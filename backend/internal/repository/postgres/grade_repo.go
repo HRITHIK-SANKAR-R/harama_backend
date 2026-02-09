@@ -42,6 +42,39 @@ func (r *GradeRepo) SaveEscalation(ctx context.Context, escalation *domain.Escal
 	return err
 }
 
+type GlobalStat struct {
+	TotalSubmissions  int     `json:"total_submissions"`
+	AutoGraded        int     `json:"auto_graded"`
+	NeedsReview       int     `json:"needs_review"`
+	AverageConfidence float64 `json:"average_confidence"`
+}
+
+func (r *GradeRepo) GetGlobalStats(ctx context.Context, tenantID uuid.UUID) (*GlobalStat, error) {
+	stat := new(GlobalStat)
+
+	// Count total submissions for tenant
+	subCount, err := r.db.NewSelect().
+		Table("submissions").
+		Where("tenant_id = ?", tenantID).
+		Count(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stat.TotalSubmissions = subCount
+
+	// Count by grade status
+	err = r.db.NewSelect().
+		Table("grades").
+		ColumnExpr("COUNT(CASE WHEN status = 'auto_graded' THEN 1 END) as auto_graded").
+		ColumnExpr("COUNT(CASE WHEN status = 'needs_review' THEN 1 END) as needs_review").
+		ColumnExpr("AVG(confidence) as average_confidence").
+		Join("JOIN submissions ON grades.submission_id = submissions.id").
+		Where("submissions.tenant_id = ?", tenantID).
+		Scan(ctx, stat)
+
+	return stat, err
+}
+
 type QuestionStat struct {
 	QuestionID    uuid.UUID `bun:"question_id"`
 	AvgScore      float64   `bun:"avg_score"`

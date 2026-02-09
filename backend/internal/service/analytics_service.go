@@ -24,9 +24,13 @@ func NewAnalyticsService(gradeRepo *postgres.GradeRepo, examRepo *postgres.ExamR
 	}
 }
 
-func (s *AnalyticsService) GetGradingTrends(ctx context.Context, examID uuid.UUID) (interface{}, error) {
+func (s *AnalyticsService) GetGradingTrends(ctx context.Context, tenantID uuid.UUID, examID *uuid.UUID) (interface{}, error) {
+	if examID == nil {
+		return s.gradeRepo.GetGlobalStats(ctx, tenantID)
+	}
+
 	// 1. Get raw stats from DB
-	stats, err := s.gradeRepo.GetExamStats(ctx, examID)
+	stats, err := s.gradeRepo.GetExamStats(ctx, *examID)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"harama/internal/auth"
 	"harama/internal/service"
 
 	"github.com/go-chi/chi/v5"
@@ -19,19 +20,24 @@ func NewAnalyticsHandler(s *service.AnalyticsService) *AnalyticsHandler {
 }
 
 func (h *AnalyticsHandler) GetGradingTrends(w http.ResponseWriter, r *http.Request) {
-	examIDStr := r.URL.Query().Get("exam_id")
-	if examIDStr == "" {
-		http.Error(w, "exam_id query parameter is required", http.StatusBadRequest)
-		return
-	}
-	
-	examID, err := uuid.Parse(examIDStr)
+	tenantID, err := auth.GetTenantID(r.Context())
 	if err != nil {
-		http.Error(w, "invalid exam_id", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	trends, err := h.service.GetGradingTrends(r.Context(), examID)
+	var examIDPtr *uuid.UUID
+	examIDStr := r.URL.Query().Get("exam_id")
+	if examIDStr != "" {
+		examID, err := uuid.Parse(examIDStr)
+		if err != nil {
+			http.Error(w, "invalid exam_id", http.StatusBadRequest)
+			return
+		}
+		examIDPtr = &examID
+	}
+
+	trends, err := h.service.GetGradingTrends(r.Context(), tenantID, examIDPtr)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

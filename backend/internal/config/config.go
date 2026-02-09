@@ -16,6 +16,7 @@ type Config struct {
 	MinioBucket       string
 	MinioUseSSL       bool
 	SupabaseURL       string
+	SupabaseAnonKey   string
 	SupabaseJWTSecret string
 	CORSOrigin        string
 }
@@ -33,6 +34,7 @@ func Load() *Config {
 		MinioBucket:       getEnv("MINIO_BUCKET", "harama"),
 		MinioUseSSL:       getEnv("MINIO_USE_SSL", "false") == "true",
 		SupabaseURL:       getEnv("SUPABASE_URL", ""),
+		SupabaseAnonKey:   getEnv("SUPABASE_ANON_KEY", ""),
 		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
 		CORSOrigin:        getEnv("CORS_ORIGIN", "http://localhost:3000"),
 	}
